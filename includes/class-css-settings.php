@@ -43,6 +43,7 @@ class CSSSettings {
     $this->options['enabled'] = isset($_POST['enabled']);
     $this->options['preserve_media_queries'] = isset($_POST['preserve_media_queries']);
     $this->options['exclude_font_awesome'] = isset($_POST['exclude_font_awesome']);
+    $this->options['debug_mode'] = isset($_POST['debug_mode']); // Add this line
     
     // Ensure proper array handling for excluded URLs and classes
     $excluded_urls = isset($_POST['excluded_urls']) ? $_POST['excluded_urls'] : '';
@@ -74,6 +75,21 @@ class CSSSettings {
                                 <input type="checkbox" name="enabled" <?php checked($this->options['enabled']); ?>>
                                 Enable CSS optimization
                             </label>
+                        </td>
+                      
+                      
+                      
+                    </tr>
+  
+                  <tr>
+       
+                        <th scope="row">Debug Mode</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="debug_mode" <?php checked($this->options['debug_mode']); ?>>
+                                Enable debug logging
+                            </label>
+                            <p class="description">Logs detailed information about CSS optimization process.</p>
                         </td>
                     </tr>
                     <tr>

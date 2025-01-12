@@ -10,9 +10,10 @@ if (!defined('ABSPATH')) {
 class CSSProcessor {
     private $options;
     
-    public function __construct($options) {
+       public function __construct($options) {
         $this->options = $options;
     }
+
 
     public function process_styles() {
         global $wp_styles;
@@ -90,16 +91,35 @@ class CSSProcessor {
     }
 
     private function get_css_content($handle, $wp_styles) {
-        $style = $wp_styles->registered[$handle];
-        $src = $this->normalize_url($style->src);
-        
-        $css_file = $this->get_local_css_path($src);
-        if ($css_file && is_file($css_file)) {
-            return @file_get_contents($css_file);
-        }
-        
-        return $this->fetch_remote_css($src);
+    if (!isset($wp_styles->registered[$handle])) {
+        error_log("CSS Optimizer: Style handle '$handle' not found");
+        return false;
     }
+    
+    $style = $wp_styles->registered[$handle];
+    if (!isset($style->src)) {
+        error_log("CSS Optimizer: No source found for style '$handle'");
+        return false;
+    }
+    
+    $src = $this->normalize_url($style->src);
+    if (empty($src)) {
+        return false;
+    }
+    
+    $css_file = $this->get_local_css_path($src);
+    if ($css_file && is_file($css_file)) {
+        $content = @file_get_contents($css_file);
+        if ($content === false) {
+            error_log("CSS Optimizer: Failed to read file: $css_file");
+            return false;
+        }
+        return $content;
+    }
+    
+    return $this->fetch_remote_css($src);
+}
+
 
     private function normalize_url($src) {
         if (strpos($src, '//') === 0) {
@@ -139,15 +159,21 @@ class CSSProcessor {
         return !is_wp_error($response) ? wp_remote_retrieve_body($response) : false;
     }
 
-    private function process_and_enqueue_style($handle, $css_content, $wp_styles) {
-        $optimized_css = $this->optimize_css($css_content);
-        $optimized_css = $this->fix_font_paths($optimized_css, dirname($wp_styles->registered[$handle]->src));
-
-        wp_deregister_style($handle);
-        wp_register_style($handle . '-optimized', false);
-        wp_enqueue_style($handle . '-optimized');
-        wp_add_inline_style($handle . '-optimized', $optimized_css);
+   private function process_and_enqueue_style($handle, $css_content, $wp_styles) {
+    // Add check for theme-generated styles
+    if (strpos($handle, 'custom-styles') !== false) {
+        // Skip processing for theme custom styles or handle differently
+        return;
     }
+    
+    $optimized_css = $this->optimize_css($css_content);
+    $optimized_css = $this->fix_font_paths($optimized_css, dirname($wp_styles->registered[$handle]->src));
+
+    wp_deregister_style($handle);
+    wp_register_style($handle . '-optimized', false);
+    wp_enqueue_style($handle . '-optimized');
+    wp_add_inline_style($handle . '-optimized', $optimized_css);
+}
 
       private function optimize_css($css) {
         if ($this->options['preserve_media_queries']) {
